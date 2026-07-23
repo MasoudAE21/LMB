@@ -2,40 +2,43 @@ import numpy as np
 
 from config import *
 
-from solver.initialize import initialize
-from solver.macroscopic import macroscopic
 from solver.collision import collide
 from solver.streaming import stream
-from boundary.bounce_back import apply_bounce_back
-from boundary.moving_wall import moving_lid
+from state import LBMState
 from utils.plotting import plot_velocity
 
 
-f, rho, ux, uy = initialize(
-    NX,
-    NY,
-    rho0,
-    ux0,
-    uy0
-)
+state = LBMState(NX, NY)
 
-for step in range(num_steps):
+state.initialize_flow()
 
-    rho, ux, uy = macroscopic(f)
-    print(f"Step: {step}, rho: {rho.mean()}, ux: {ux.mean()}, uy: {uy.mean()}")
-    f = collide(
-        f,
-        rho,
-        ux,
-        uy,
+for _ in range(num_steps):
+
+    state.save_previous_state()
+
+    state.compute_flow()
+
+    f_intermediate = collide(
+        state.f,
+        state.rho,
+        state.ux,
+        state.uy,
         tau
     )
 
-    f = stream(f)
-    f = apply_bounce_back(f)
-    f = moving_lid(f, rho, 0.02)
+    f_intermediate = stream(f_intermediate)
 
-plot_velocity(ux, uy)
+    # f_intermediate = boundary_manager.apply_flow(f_intermediate)
+    
+    state.update_flow_distribution(f_intermediate)
+
+    state.next_iteration()
+
+    if state.residual() < 1e-8:
+        print("Converged")
+        break
+
+plot_velocity(state.ux, state.uy)
     
 
 print("Simulation finished.")
