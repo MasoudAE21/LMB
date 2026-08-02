@@ -1,30 +1,57 @@
-# lattice/equilibrium.py
-
 import numpy as np
-from lattice.d2q9 import D2Q9
 
 
-def equilibrium(rho, ux, uy):
+def equilibrium(rho, u, lattice):
+    """
+    General equilibrium distribution.
 
-    feq = np.zeros((9, *rho.shape))
+    Parameters
+    ----------
+    rho : ndarray
+        Density (or concentration).
 
-    u2 = ux**2 + uy**2
+    u : ndarray
+        Velocity field with shape (D, ...).
+        Examples:
+            D1 -> (1, nx)
+            D2 -> (2, ny, nx)
+            D3 -> (3, nz, ny, nx)
 
-    for i in range(D2Q9.Q):
+    lattice : lattice class
+        Must define:
+            D
+            Q
+            c
+            w
+            cs2
+            cs4
+    """
 
-        cu = (
-            D2Q9.c[i,0]*ux +
-            D2Q9.c[i,1]*uy
-        )
+    feq = np.empty((lattice.Q, *rho.shape))
+
+    # |u|²
+    u2 = np.sum(u**2, axis=0)
+
+    inv_cs2 = 1.0 / lattice.cs2
+    inv_2cs4 = 1.0 / (2 * lattice.cs4)
+    inv_2cs2 = 1.0 / (2 * lattice.cs2)
+
+    for i in range(lattice.Q):
+
+        # e_i · u
+        cu = np.zeros_like(rho)
+
+        for d in range(lattice.D):
+            cu += lattice.c[i, d] * u[d]
 
         feq[i] = (
-            D2Q9.w[i]
+            lattice.w[i]
             * rho
             * (
-                1
-                + 3*cu
-                + 4.5*cu**2
-                - 1.5*u2
+                1.0
+                + inv_cs2 * cu
+                + inv_2cs4 * cu**2
+                - inv_2cs2 * u2
             )
         )
 
