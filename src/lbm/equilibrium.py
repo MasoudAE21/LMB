@@ -1,58 +1,197 @@
 import numpy as np
 
 
-def equilibrium(rho, u, lattice):
+def _weights_for_field(lattice, ndim):
     """
-    General equilibrium distribution.
+    Reshape lattice weights for broadcasting over a spatial field.
+
+    Example
+    -------
+    rho.shape = (ny, nx)
+    result.shape = (Q, 1, 1)
+    """
+    return lattice.w.reshape(
+        (lattice.Q,) + (1,) * ndim
+    )
+
+
+def flow_equilibrium(rho, u, lattice):
+    """
+    Compute the second-order equilibrium distribution
+    for the hydrodynamic LBM.
+
+    Intended primarily for D2Q9.
 
     Parameters
     ----------
     rho : ndarray
-        Density (or concentration).
+        Density field.
+
+        D2:
+            shape = (ny, nx)
 
     u : ndarray
-        Velocity field with shape (D, ...).
-        Examples:
-            D1 -> (1, nx)
-            D2 -> (2, ny, nx)
-            D3 -> (3, nz, ny, nx)
+        Velocity field.
+
+        D2:
+            shape = (2, ny, nx)
+
+        u[0] = ux
+        u[1] = uy
 
     lattice : lattice class
-        Must define:
-            D
-            Q
-            c
-            w
-            cs2
-            cs4
+        Normally D2Q9.
+
+    Returns
+    -------
+    feq : ndarray
+        Equilibrium distribution.
+
+        shape = (Q, *rho.shape)
     """
 
-    feq = np.empty((lattice.Q, *rho.shape))
+    rho = np.asarray(rho, dtype=np.float64)
+    u = np.asarray(u, dtype=np.float64)
 
-    # |u|²
-    u2 = np.sum(u**2, axis=0)
-
-    inv_cs2 = 1.0 / lattice.cs2
-    inv_2cs4 = 1.0 / (2 * lattice.cs4)
-    inv_2cs2 = 1.0 / (2 * lattice.cs2)
-
-    for i in range(lattice.Q):
-
-        # e_i · u
-        cu = np.zeros_like(rho)
-
-        for d in range(lattice.D):
-            cu += lattice.c[i, d] * u[d]
-
-        feq[i] = (
-            lattice.w[i]
-            * rho
-            * (
-                1.0
-                + inv_cs2 * cu
-                + inv_2cs4 * cu**2
-                - inv_2cs2 * u2
-            )
+    if u.shape[0] != lattice.D:
+        raise ValueError(
+            f"Expected velocity with first dimension "
+            f"{lattice.D}, got {u.shape[0]}."
         )
 
+    if u.shape[1:] != rho.shape:
+        raise ValueError(
+            "Velocity spatial shape must match rho shape."
+        )
+
+    # c_i dot u
+    #
+    # lattice.c : (Q, D)
+    # u         : (D, ...)
+    # cu        : (Q, ...)
+    cu = np.einsum(
+        "id,d...->i...",
+        lattice.c,
+        u
+    )
+
+    # |u|^2
+    u2 = np.sum(u**2, axis=0)
+
+    w = _weights_for_field(
+        lattice,
+        rho.ndim
+    )
+
+    cs2 = lattice.cs2
+    cs4 = lattice.cs4
+
+    feq = (
+        w
+        * rho[None, ...]
+        * (
+            1.0
+            + cu / cs2
+            + 0.5 * cu**2 / cs4
+            - 0.5 * u2[None, ...] / cs2
+        )
+    )
+
     return feq
+
+
+def scalar_equilibrium(phi, u, lattice):
+    """
+    Compute equilibrium distribution for a scalar
+    convection-diffusion equation.
+
+    Used for:
+        - D1Q3 heat conduction
+        - D2Q5 temperature transport
+
+    Parameters
+    ----------
+    phi : ndarray
+        Scalar field.
+
+        D1:
+            shape = (nx,)
+
+        D2:
+            shape = (ny, nx)
+
+    u : ndarray or None
+        Velocity field.
+
+        D1:
+            shape = (1, nx)
+
+        D2:
+            shape = (2, ny, nx)
+
+        For pure diffusion, u may be None.
+
+    lattice : lattice class
+        D1Q3 or D2Q5.
+
+    Returns
+    -------
+    geq : ndarray
+        Scalar equilibrium populations.
+
+        shape = (Q, *phi.shape)
+    """
+
+    phi = np.asarray(
+        phi,
+        dtype=np.float64
+    )
+
+    w = _weights_for_field(
+        lattice,
+        phi.ndim
+    )
+
+    # Pure diffusion:
+    #
+    # g_i^eq = w_i * phi
+    if u is None:
+        return (
+            w
+            * phi[None, ...]
+        )
+
+    u = np.asarray(
+        u,
+        dtype=np.float64
+    )
+
+    if u.shape[0] != lattice.D:
+        raise ValueError(
+            f"Expected velocity with first dimension "
+            f"{lattice.D}, got {u.shape[0]}."
+        )
+
+    if u.shape[1:] != phi.shape:
+        raise ValueError(
+            "Velocity spatial shape must match phi shape."
+        )
+
+    # c_i dot u
+    cu = np.einsum(
+        "id,d...->i...",
+        lattice.c,
+        u
+    )
+
+    # First-order scalar equilibrium
+    geq = (
+        w
+        * phi[None, ...]
+        * (
+            1.0
+            + cu / lattice.cs2
+        )
+    )
+
+    return geq

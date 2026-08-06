@@ -1,20 +1,28 @@
-# lattice/d2q9.py
+# lattice/d2q5.py
 
 import numpy as np
 
 
 class D2Q5:
+    """D2Q5 lattice for two-dimensional scalar transport."""
 
-    # lattice velocities
+    # Discrete lattice velocities
+    #
+    #       2
+    #       |
+    #   3---0---1
+    #       |
+    #       4
+    #
     c = np.array([
-        [ 0, 0],
-        [ 1, 0],
-        [ 0, 1],
-        [-1, 0],
-        [ 0,-1]
+        [ 0,  0],
+        [ 1,  0],
+        [ 0,  1],
+        [-1,  0],
+        [ 0, -1]
     ], dtype=np.int8)
 
-    # lattice weights
+    # Lattice weights
     w = np.array([
         2/6,
         1/6,
@@ -23,7 +31,7 @@ class D2Q5:
         1/6
     ], dtype=np.float64)
 
-    # opposite directions
+    # Opposite directions
     opp = np.array([
         0,
         3,
@@ -34,4 +42,6 @@ class D2Q5:
 
     Q = 5
     D = 2
-    cs2 = 1 / 3
+
+    cs2 = 1.0 / 3.0
+    cs4 = cs2**2
