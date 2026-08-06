@@ -29,7 +29,7 @@ class D2Q9:
         1/36,
         1/36,
         1/36
-    ])
+    ], dtype=np.float64)
 
     # opposite directions
     opp = np.array([
@@ -42,6 +42,8 @@ class D2Q9:
         8,
         5,
         6
-    ])
+    ], dtype=np.int8)
 
     Q = 9
+    D = 2
+    cs2 = 1 / 3

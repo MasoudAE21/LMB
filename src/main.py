@@ -2,8 +2,8 @@ import numpy as np
 
 from config import *
 
-from solver.collision import collide
-from solver.streaming import stream
+from lbm.collision import collide
+from lbm.streaming import stream
 from state import LBMState
 from utils.plotting import plot_velocity
 
