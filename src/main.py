@@ -43,7 +43,18 @@
 
 # print("Simulation finished.")
 
-from problems.problem_2_transient_conduction import run
+# from problems.problem_2_transient_conduction import run
 
 
-run()
+# run()
+
+from problems.problem_1_natural_convection import run
+from utils.plotting import plot_results
+
+result = run(
+    Ra=1e3,
+    nx=101,
+    ny=101
+)
+
+plot_results(result)

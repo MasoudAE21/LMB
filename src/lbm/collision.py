@@ -4,15 +4,20 @@ from lbm.equilibrium import (
 )
 
 
-def collide_flow(f, rho, u, tau, lattice):
+def collide_flow(f, rho, u, tau, lattice, source=None):
 
     feq = flow_equilibrium(
         rho,
         u,
         lattice
     )
-
-    return f - (f - feq) / tau
+    
+    f_post = f - (f - feq) / tau
+    
+    if source is not None:
+        f_post += source
+    
+    return f_post
 
 
 def collide_scalar(g, phi, tau, lattice, u=None):
