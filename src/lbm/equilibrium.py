@@ -1,4 +1,5 @@
 import numpy as np
+from lbm.lattice import *
 
 
 def _weights_for_field(lattice, ndim):
@@ -10,9 +11,7 @@ def _weights_for_field(lattice, ndim):
     rho.shape = (ny, nx)
     result.shape = (Q, 1, 1)
     """
-    return lattice.w.reshape(
-        (lattice.Q,) + (1,) * ndim
-    )
+    return lattice.w.reshape((lattice.Q,) + (1,) * ndim)
 
 
 def flow_equilibrium(rho, u, lattice):
@@ -102,13 +101,6 @@ def flow_equilibrium(rho, u, lattice):
 
 def scalar_equilibrium(phi, u, lattice):
     """
-    Compute equilibrium distribution for a scalar
-    convection-diffusion equation.
-
-    Used for:
-        - D1Q3 heat conduction
-        - D2Q5 temperature transport
-
     Parameters
     ----------
     phi : ndarray
@@ -132,7 +124,7 @@ def scalar_equilibrium(phi, u, lattice):
         For pure diffusion, u may be None.
 
     lattice : lattice class
-        D1Q3 or D2Q5.
+        DxQy
 
     Returns
     -------

@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from solver.equilibrium import (
+from lbm.equilibrium import (
     flow_equilibrium,
     scalar_equilibrium,
 )

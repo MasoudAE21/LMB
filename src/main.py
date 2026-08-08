@@ -1,44 +1,49 @@
-import numpy as np
+# import numpy as np
 
-from config import *
+# from config import *
 
-from lbm.collision import collide
-from lbm.streaming import stream
-from state import LBMState
-from utils.plotting import plot_velocity
+# from lbm.collision import collide
+# from lbm.streaming import stream
+# from state import LBMState
+# from utils.plotting import plot_velocity
 
 
-state = LBMState(NX, NY)
+# state = LBMState(NX, NY)
 
-state.initialize_flow()
+# state.initialize_flow()
 
-for _ in range(num_steps):
+# for _ in range(num_steps):
 
-    state.save_previous_state()
+#     state.save_previous_state()
 
-    state.compute_flow()
+#     state.compute_flow()
 
-    f_intermediate = collide(
-        state.f,
-        state.rho,
-        state.ux,
-        state.uy,
-        tau
-    )
+#     f_intermediate = collide(
+#         state.f,
+#         state.rho,
+#         state.ux,
+#         state.uy,
+#         tau
+#     )
 
-    f_intermediate = stream(f_intermediate)
+#     f_intermediate = stream(f_intermediate)
 
-    # f_intermediate = boundary_manager.apply_flow(f_intermediate)
+#     # f_intermediate = boundary_manager.apply_flow(f_intermediate)
     
-    state.update_flow_distribution(f_intermediate)
+#     state.update_flow_distribution(f_intermediate)
 
-    state.next_iteration()
+#     state.next_iteration()
 
-    if state.residual() < 1e-8:
-        print("Converged")
-        break
+#     if state.residual() < 1e-8:
+#         print("Converged")
+#         break
 
-plot_velocity(state.ux, state.uy)
+# plot_velocity(state.ux, state.uy)
     
 
-print("Simulation finished.")
+# print("Simulation finished.")
+
+from problems.problem_2_transient_conduction import run_problem2
+
+
+run_problem2()

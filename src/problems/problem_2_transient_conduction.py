@@ -22,7 +22,7 @@ class Problem2Config:
     """
 
     # Number of fluid lattice nodes
-    nx: int = 101
+    nx: int = 201
 
     # Physical rod length
     length: float = 1.0
@@ -36,10 +36,10 @@ class Problem2Config:
     # The project statement does not specify
     # thermal diffusivity/tau, so this remains
     # configurable.
-    tau: float = 1.0
+    tau: float = 2.0
 
     # Maximum iterations
-    max_steps: int = 200_000
+    max_steps: int = 10_000
 
     # Steady convergence criterion
     tolerance: float = 1.0e-10

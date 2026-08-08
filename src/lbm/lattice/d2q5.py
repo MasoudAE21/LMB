@@ -4,7 +4,6 @@ import numpy as np
 
 
 class D2Q5:
-    """D2Q5 lattice for two-dimensional scalar transport."""
 
     # Discrete lattice velocities
     #

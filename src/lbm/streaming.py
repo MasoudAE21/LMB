@@ -5,8 +5,6 @@ import numpy as np
 
 def stream(populations, lattice):
     """
-    Stream LBM populations without periodic wrapping.
-
     Parameters
     ----------
     populations : ndarray

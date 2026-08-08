@@ -4,7 +4,6 @@ import numpy as np
 
 
 class D1Q3:
-    """D1Q3 lattice for one-dimensional scalar diffusion."""
 
     # Discrete lattice velocities
     c = np.array([

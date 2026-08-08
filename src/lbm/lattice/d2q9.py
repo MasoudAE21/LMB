@@ -4,7 +4,6 @@ import numpy as np
 
 
 class D2Q9:
-    """D2Q9 lattice for two-dimensional fluid flow."""
 
     # Discrete lattice velocities
     #
