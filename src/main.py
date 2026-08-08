@@ -43,7 +43,7 @@
 
 # print("Simulation finished.")
 
-from problems.problem_2_transient_conduction import run_problem2
+from problems.problem_2_transient_conduction import run
 
 
-run_problem2()
+run()

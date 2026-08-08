@@ -1,128 +1,62 @@
-# solver/streaming.py
-
 import numpy as np
 
 
-def stream(populations, lattice):
-    """
-    Parameters
-    ----------
-    populations : ndarray
-        Distribution after collision.
+def stream(f, lattice):
 
-        shape:
-            (Q, nx)          for D1
-            (Q, ny, nx)      for D2
+    streamed = np.empty_like(f)
 
-    lattice : lattice class
-        D1Q3, D2Q5, or D2Q9.
+    # -----------------------------
+    # 1D
+    # -----------------------------
+    if lattice.D == 1:
 
-    Returns
-    -------
-    streamed : ndarray
-        Streamed distribution.
+        for i in range(lattice.Q):
 
-    Notes
-    -----
-    Populations entering the computational domain
-    from outside are left as zero.
+            cx = lattice.c[i, 0]
 
-    Boundary-condition routines must reconstruct
-    those populations afterward.
-    """
-
-    populations = np.asarray(populations)
-
-    expected_ndim = lattice.D + 1
-
-    if populations.ndim != expected_ndim:
-        raise ValueError(
-            f"Expected populations with "
-            f"{expected_ndim} dimensions, "
-            f"got {populations.ndim}."
-        )
-
-    if populations.shape[0] != lattice.Q:
-        raise ValueError(
-            f"Expected Q={lattice.Q}, "
-            f"got {populations.shape[0]} populations."
-        )
-
-    streamed = np.zeros_like(
-        populations
-    )
-
-    for i in range(lattice.Q):
-
-        velocity = lattice.c[i]
-
-        source_slices = [
-            slice(None)
-            for _ in range(lattice.D)
-        ]
-
-        destination_slices = [
-            slice(None)
-            for _ in range(lattice.D)
-        ]
-
-        for d in range(lattice.D):
-
-            shift = int(
-                velocity[d]
+            streamed[i] = np.roll(
+                f[i],
+                shift=cx
             )
 
-            # Physical dimensions:
-            #
-            # d = 0 -> x
-            # d = 1 -> y
-            #
-            # Array dimensions:
-            #
-            # D1:
-            #     (x,)
-            #
-            # D2:
-            #     (y, x)
-            #
-            # Therefore physical and NumPy
-            # axes are reversed.
-            array_axis = (
-                lattice.D - 1 - d
+            # Remove periodic wrapping
+            if cx == 1:
+                streamed[i, 0] = 0.0
+
+            elif cx == -1:
+                streamed[i, -1] = 0.0
+
+    # -----------------------------
+    # 2D
+    # -----------------------------
+    else:
+
+        for i in range(lattice.Q):
+
+            cx, cy = lattice.c[i]
+
+            streamed[i] = np.roll(
+                np.roll(
+                    f[i],
+                    shift=cy,
+                    axis=0
+                ),
+                shift=cx,
+                axis=1
             )
 
-            if shift > 0:
+            # Remove y wrapping
+            if cy == 1:
+                streamed[i, 0, :] = 0.0
 
-                source_slices[array_axis] = (
-                    slice(0, -shift)
-                )
+            elif cy == -1:
+                streamed[i, -1, :] = 0.0
 
-                destination_slices[array_axis] = (
-                    slice(shift, None)
-                )
+            # Remove x wrapping
+            if cx == 1:
+                streamed[i, :, 0] = 0.0
 
-            elif shift < 0:
-
-                source_slices[array_axis] = (
-                    slice(-shift, None)
-                )
-
-                destination_slices[array_axis] = (
-                    slice(0, shift)
-                )
-
-        source_index = (
-            (i,)
-            + tuple(source_slices)
-        )
-
-        destination_index = (
-            (i,)
-            + tuple(destination_slices)
-        )
-
-        streamed[destination_index] = (
-            populations[source_index]
-        )
+            elif cx == -1:
+                streamed[i, :, -1] = 0.0
 
     return streamed

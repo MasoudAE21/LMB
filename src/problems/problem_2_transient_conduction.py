@@ -1,481 +1,199 @@
-# problems/problem2_transient_conduction.py
-
-from dataclasses import dataclass
-
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 from lbm.lattice.d1q3 import D1Q3
 
+from lbm.equilibrium import scalar_equilibrium
 from lbm.collision import collide_scalar
-from lbm.initialize import initialize_scalar
-from lbm.macroscopic import scalar_macroscopic
 from lbm.streaming import stream
+from lbm.macroscopic import scalar_macroscopic
 
-from boundary.scalar_halfway import apply_dirichlet
-
-
-@dataclass
-class Problem2Config:
-    """
-    Configuration for 1D transient heat conduction.
-    """
-
-    # Number of fluid lattice nodes
-    nx: int = 201
-
-    # Physical rod length
-    length: float = 1.0
-
-    # Boundary temperatures
-    T_left: float = 1.0
-    T_right: float = 0.0
-
-    # LBM thermal relaxation time
-    #
-    # The project statement does not specify
-    # thermal diffusivity/tau, so this remains
-    # configurable.
-    tau: float = 2.0
-
-    # Maximum iterations
-    max_steps: int = 10_000
-
-    # Steady convergence criterion
-    tolerance: float = 1.0e-10
-
-    # Required live-plot update interval
-    plot_every: int = 50
+from boundary.scalar_halfway import (
+    dirichlet_left,
+    dirichlet_right
+)
 
 
-def analytical_steady_temperature(
-    x,
-    length,
-    T_left,
-    T_right
-):
-    """
-    Steady analytical solution of 1D conduction
-    with fixed temperatures at both ends.
-    """
+def run():
 
-    return (
-        T_left
-        + (T_right - T_left)
-        * x
-        / length
-    )
+    # ---------------------------------
+    # Problem parameters
+    # ---------------------------------
 
+    nx = 101
 
-def run_problem2(
-    config=None,
-    live_plot=True
-):
-    """
-    Solve the 1D transient heat-conduction problem
-    using D1Q3 BGK LBM.
-    """
+    L = 1.0
 
-    if config is None:
-        config = Problem2Config()
+    T_left = 1.0
+    T_right = 0.0
+
+    tau = 2.0
+
+    max_steps = 15000
+    tolerance = 1e-8
+
+    plot_every = 50
 
     lattice = D1Q3
 
-    if config.nx < 2:
-        raise ValueError(
-            "nx must be at least 2."
-        )
-
-    if config.tau <= 0.5:
-        raise ValueError(
-            "tau must be greater than 0.5."
-        )
-
-    # -------------------------------------------------
+    # ---------------------------------
     # Grid
-    # -------------------------------------------------
-    #
-    # Halfway bounce-back places the physical walls
-    # half a lattice spacing outside the first/last
-    # fluid nodes.
-    #
-    # Therefore fluid nodes are cell centers:
-    #
-    # x_j = (j + 1/2) * L / Nx
-    #
-    dx_physical = (
-        config.length
-        / config.nx
-    )
+    # ---------------------------------
+
+    dx = L / nx
 
     x = (
-        np.arange(
-            config.nx,
-            dtype=np.float64
-        )
-        + 0.5
-    ) * dx_physical
+        np.arange(nx) + 0.5
+    ) * dx
 
-    # -------------------------------------------------
+    # ---------------------------------
     # Initial condition
-    # -------------------------------------------------
-    #
-    # T(x,0) = 0 at all interior/fluid points.
-    #
-    T = np.zeros(
-        config.nx,
-        dtype=np.float64
+    # ---------------------------------
+
+    T = np.zeros(nx)
+
+    g = scalar_equilibrium(
+        T,
+        None,
+        lattice
     )
 
-    g = initialize_scalar(
-        phi=T,
-        lattice=lattice,
-        u=None
-    )
-
-    # -------------------------------------------------
-    # LBM thermal diffusivity in lattice units
-    # -------------------------------------------------
-    alpha_lattice = (
-        lattice.cs2
-        * (config.tau - 0.5)
-    )
-
-    print(
-        f"D1Q3 thermal diffusivity "
-        f"(lattice units): "
-        f"{alpha_lattice:.6g}"
-    )
-
-    # -------------------------------------------------
-    # Convergence history
-    # -------------------------------------------------
-    convergence_steps = []
-    convergence_values = []
-
-    # -------------------------------------------------
+    # ---------------------------------
     # Live convergence plot
-    # -------------------------------------------------
-    if live_plot:
+    # ---------------------------------
 
-        plt.ion()
+    plt.ion()
 
-        convergence_fig, convergence_ax = (
-            plt.subplots(
-                figsize=(7, 5)
-            )
-        )
+    fig, ax = plt.subplots()
 
-        (
-            convergence_line,
-        ) = convergence_ax.semilogy(
-            [],
-            [],
-            marker="o",
-            markersize=3
-        )
+    line, = ax.semilogy(
+        [],
+        []
+    )
 
-        convergence_ax.set_xlabel(
-            "Time step"
-        )
+    ax.set_xlabel("Time step")
+    ax.set_ylabel("Residual")
+    ax.set_title("Convergence")
 
-        convergence_ax.set_ylabel(
-            r"$\max|T^{n+1}-T^n|$"
-        )
+    steps_history = []
+    residual_history = []
 
-        convergence_ax.set_title(
-            "D1Q3 convergence history"
-        )
+    # ---------------------------------
+    # Time loop
+    # ---------------------------------
 
-        convergence_ax.grid(
-            True,
-            alpha=0.3
-        )
+    for step in range(max_steps):
 
-    # -------------------------------------------------
-    # Main LBM loop
-    # -------------------------------------------------
-    converged = False
-
-    for step in range(
-        1,
-        config.max_steps + 1
-    ):
-
-        # Macroscopic temperature before update
         T_old = scalar_macroscopic(g)
 
-        # --------------------------
         # Collision
-        # --------------------------
         g_post = collide_scalar(
-            g=g,
-            phi=T_old,
-            tau=config.tau,
-            lattice=lattice,
-            u=None
+            g,
+            T_old,
+            tau,
+            lattice
         )
 
-        # --------------------------
         # Streaming
-        # --------------------------
-        g_streamed = stream(
-            populations=g_post,
-            lattice=lattice
+        g = stream(
+            g_post,
+            lattice
         )
 
-        # --------------------------
-        # Left Dirichlet wall
-        #
-        # x = 0
-        # T = 1
-        # --------------------------
-        g_streamed = apply_dirichlet(
-            g_streamed=g_streamed,
-            g_post=g_post,
-            lattice=lattice,
-            axis=0,
-            side="low",
-            value=config.T_left
+        # Boundary conditions
+        g = dirichlet_left(
+            g,
+            g_post,
+            T_left,
+            lattice
         )
 
-        # --------------------------
-        # Right Dirichlet wall
-        #
-        # x = L
-        # T = 0
-        # --------------------------
-        g_streamed = apply_dirichlet(
-            g_streamed=g_streamed,
-            g_post=g_post,
-            lattice=lattice,
-            axis=0,
-            side="high",
-            value=config.T_right
+        g = dirichlet_right(
+            g,
+            g_post,
+            T_right,
+            lattice
         )
 
-        # Advance state
-        g = g_streamed
-
-        # New macroscopic temperature
+        # New temperature
         T = scalar_macroscopic(g)
 
-        # --------------------------
-        # Residual
-        # --------------------------
+        # Convergence
         residual = np.max(
             np.abs(
                 T - T_old
             )
         )
 
-        # --------------------------
-        # Required live update
-        # every 50 time steps
-        # --------------------------
-        if (
-            step % config.plot_every == 0
-            or step == 1
-        ):
+        # Live update every 50 steps
+        if step % plot_every == 0:
 
-            convergence_steps.append(
-                step
+            steps_history.append(step)
+            residual_history.append(residual)
+
+            line.set_data(
+                steps_history,
+                residual_history
             )
 
-            convergence_values.append(
+            ax.relim()
+            ax.autoscale_view()
+
+            plt.pause(0.001)
+
+            print(
+                step,
                 residual
             )
 
-            print(
-                f"step = {step:8d}, "
-                f"residual = "
-                f"{residual:.6e}"
-            )
-
-            if live_plot:
-
-                convergence_line.set_data(
-                    convergence_steps,
-                    convergence_values
-                )
-
-                convergence_ax.relim()
-                convergence_ax.autoscale_view()
-
-                convergence_fig.canvas.draw_idle()
-                convergence_fig.canvas.flush_events()
-
-                plt.pause(0.001)
-
-        # --------------------------
-        # Convergence test
-        # --------------------------
-        if residual < config.tolerance:
-
-            converged = True
+        if residual < tolerance:
 
             print(
-                "\nConverged at "
-                f"step {step}"
-            )
-
-            print(
-                "Final residual = "
-                f"{residual:.6e}"
+                f"Converged after {step} steps"
             )
 
             break
 
-    if not converged:
+    plt.ioff()
 
-        print(
-            "\nWarning: maximum number "
-            "of steps reached."
-        )
+    # ---------------------------------
+    # Analytical steady solution
+    # ---------------------------------
 
-        print(
-            "Final residual = "
-            f"{residual:.6e}"
-        )
-
-    # -------------------------------------------------
-    # Final analytical solution
-    # -------------------------------------------------
-    T_analytical = (
-        analytical_steady_temperature(
-            x=x,
-            length=config.length,
-            T_left=config.T_left,
-            T_right=config.T_right
-        )
+    T_exact = (
+        T_left
+        + (T_right - T_left)
+        * x / L
     )
 
-    # -------------------------------------------------
-    # Error
-    # -------------------------------------------------
-    error_linf = np.max(
-        np.abs(
-            T - T_analytical
-        )
-    )
+    # ---------------------------------
+    # Final temperature plot
+    # ---------------------------------
 
-    error_l2 = np.sqrt(
-        np.mean(
-            (
-                T
-                - T_analytical
-            ) ** 2
-        )
-    )
+    plt.figure()
 
-    print(
-        "\nSteady-state errors:"
-    )
-
-    print(
-        f"L_inf = {error_linf:.6e}"
-    )
-
-    print(
-        f"L2    = {error_l2:.6e}"
-    )
-
-    # -------------------------------------------------
-    # Add actual wall points for final plot
-    # -------------------------------------------------
-    x_plot = np.concatenate(
-        (
-            [0.0],
-            x,
-            [config.length]
-        )
-    )
-
-    T_numerical_plot = np.concatenate(
-        (
-            [config.T_left],
-            T,
-            [config.T_right]
-        )
-    )
-
-    T_analytical_plot = (
-        analytical_steady_temperature(
-            x=x_plot,
-            length=config.length,
-            T_left=config.T_left,
-            T_right=config.T_right
-        )
-    )
-
-    # -------------------------------------------------
-    # Final temperature profile
-    # -------------------------------------------------
-    plt.figure(
-        figsize=(7, 5)
+    plt.plot(
+        x,
+        T_exact,
+        label="Analytical"
     )
 
     plt.plot(
-        x_plot,
-        T_analytical_plot,
-        label="Analytical steady solution",
-        linewidth=2
-    )
-
-    plt.plot(
-        x_plot,
-        T_numerical_plot,
+        x,
+        T,
         "o",
-        markersize=4,
-        markevery=max(
-            1,
-            config.nx // 20
-        ),
-        label="D1Q3 numerical"
+        markersize=3,
+        label="LBM"
     )
 
     plt.xlabel("x")
     plt.ylabel("Temperature")
-    plt.title(
-        "1D transient conduction: final profile"
-    )
-
-    plt.grid(
-        True,
-        alpha=0.3
-    )
 
     plt.legend()
-    plt.tight_layout()
-
-    if live_plot:
-        plt.ioff()
+    plt.grid()
 
     plt.show()
 
-    # -------------------------------------------------
-    # Return results for tests / postprocessing
-    # -------------------------------------------------
-    return {
-        "x": x,
-        "temperature": T,
-        "analytical": T_analytical,
-        "populations": g,
-        "steps": step,
-        "residual": residual,
-        "convergence_steps": np.asarray(
-            convergence_steps
-        ),
-        "convergence_values": np.asarray(
-            convergence_values
-        ),
-        "error_linf": error_linf,
-        "error_l2": error_l2,
-        "alpha_lattice": alpha_lattice,
-        "converged": converged,
-    }
-
 
 if __name__ == "__main__":
-
-    run_problem2()
+    run()
