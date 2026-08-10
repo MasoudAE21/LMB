@@ -54,7 +54,8 @@ from utils.plotting import plot_results
 result = run(
     Ra=1e3,
     nx=101,
-    ny=101
+    ny=101,
+    max_steps=3000
 )
 
 plot_results(result)
