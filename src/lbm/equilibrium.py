@@ -4,29 +4,25 @@ import numpy as np
 def flow_equilibrium(rho, u, lattice):
     """
     D2Q9 equilibrium distribution for fluid flow.
-
     rho : (ny, nx)
     u   : (2, ny, nx)
     """
-
     feq = np.empty((lattice.Q, *rho.shape))
     ux = u[0]
     uy = u[1]
     u2 = ux**2 + uy**2
     cs2 = lattice.cs2
     cs4 = cs2**2
-
     for i in range(lattice.Q):
         cx, cy = lattice.c[i]
         cu = cx * ux + cy * uy
         feq[i] = (lattice.w[i] * rho * (1.0 + cu / cs2 + cu**2 / (2.0 * cs4) - u2 / (2.0 * cs2)))
-
     return feq
 
 
 def scalar_equilibrium(phi, u, lattice):
     """
-    Equilibrium distribution for temperature/scalar transport
+    Equilibrium distribution for temperature transport
     D1Q3:
         phi : (nx,)
         u   : None or (1, nx)

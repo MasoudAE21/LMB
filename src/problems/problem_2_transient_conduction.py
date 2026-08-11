@@ -11,32 +11,21 @@ from boundary.scalar_halfway import (
 )
 
 
-def run():
-    # ---------------------------------
+def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
     # Problem parameters
-    # ---------------------------------
-    nx = 101
     L = 1.0
     T_left = 1.0
     T_right = 0.0
-    tau = 2.0
-    max_steps = 15000
-    tolerance = 1e-8
     plot_every = 50
     lattice = D1Q3
-    # ---------------------------------
+    tau = 3.0 * thermal_diffusivity + 0.5
     # Grid
-    # ---------------------------------
     dx = L / nx
     x = (np.arange(nx) + 0.5) * dx
-    # ---------------------------------
     # Initial condition
-    # ---------------------------------
     T = np.zeros(nx)
     g = scalar_equilibrium(T, None, lattice)
-    # ---------------------------------
     # Live convergence plot
-    # ---------------------------------
     plt.ion()
     fig, ax = plt.subplots()
     line, = ax.semilogy([], [])
@@ -45,9 +34,7 @@ def run():
     ax.set_title("Convergence")
     steps_history = []
     residual_history = []
-    # ---------------------------------
     # Time loop
-    # ---------------------------------
     for step in range(max_steps):
         T_old = scalar_macroscopic(g)
         # Collision
@@ -70,7 +57,7 @@ def run():
             ax.autoscale_view()
             plt.pause(0.001)
             print(step, residual)
-        if residual < tolerance:
+        if residual < tol:
             print(f"Converged after {step} steps")
             break
     plt.ioff()
