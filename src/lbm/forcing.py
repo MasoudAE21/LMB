@@ -13,7 +13,7 @@ def buoyancy_force(rho, T, g_beta, T_ref):
     return force
 
 
-def source(force, lattice):
+def get_source(force, lattice):
     source = np.empty((lattice.Q, *force.shape[1:]))
     Fx = force[0]
     Fy = force[1]

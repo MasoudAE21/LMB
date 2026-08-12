@@ -1,0 +1,24 @@
+1
+
+problem_2(thermal_diffusivity=0.2, nx=50, max_steps=100000, tol=1e-6)
+Converged after 7878 steps
+
+======================
+2
+
+problem_2(thermal_diffusivity=0.2, nx=100, max_steps=100000, tol=1e-6)
+Converged after 24488 steps
+
+======================
+3
+
+problem_2(thermal_diffusivity=0.1, nx=50, max_steps=100000, tol=1e-6)
+Converged after 13996 steps
+
+======================
+4
+
+problem_2(thermal_diffusivity=0.1, nx=100, max_steps=100000, tol=1e-6)
+Converged after 41949 steps
+
+======================

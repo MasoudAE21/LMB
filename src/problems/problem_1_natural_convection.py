@@ -72,7 +72,7 @@ def run(
         # Macroscopic velocity
         rho, u = flow_macroscopic(f, D2Q9, force)
         # Guo forcing term
-        source = source(force, u, tau_f, D2Q9)
+        source = get_source(force, D2Q9)
         # Collision
         f_post = collide_flow(f, rho, u, tau_f, D2Q9, source)
         # Streaming

@@ -1,0 +1,2 @@
+problem_2(thermal_diffusivity=0.2, nx=50, max_steps=100000, tol=1e-6)
+Converged after 7878 steps
