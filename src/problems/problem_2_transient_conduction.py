@@ -5,13 +5,13 @@ from lbm.equilibrium import scalar_equilibrium
 from lbm.collision import collide_scalar
 from lbm.streaming import stream
 from lbm.macroscopic import scalar_macroscopic
-from boundary.scalar_halfway import (
+from boundary.scalar import (
     dirichlet_left,
     dirichlet_right
 )
 
 
-def run(thermal_diffusivity=0.5, nx=101, max_steps=20000, tol=1e-6):
+def run(thermal_diffusivity=0.05, nx=101, max_steps=20000, tol=1e-6):
     # Problem parameters
     L = 1.0
     T_left = 1.0

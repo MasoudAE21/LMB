@@ -1,7 +1,4 @@
 def no_slip_walls(f, f_post, lattice):
-    """
-    Halfway bounce-back on all four stationary walls.
-    """
     for i in range(lattice.Q):
         cx, cy = lattice.c[i]
         opposite = lattice.opp[i]

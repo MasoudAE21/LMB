@@ -2,15 +2,12 @@ import numpy as np
 
 
 def scalar_macroscopic(g):
-    """
-    Recover temperature/scalar field.
-    """
     return np.sum(g, axis=0)
 
 
 def flow_macroscopic(f, lattice, force=None):
     """
-    Recover density and velocity
+    density and velocity
     f : (Q, ny, nx)
     returns
     -------

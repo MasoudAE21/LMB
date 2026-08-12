@@ -7,14 +7,15 @@ from lbm.streaming import stream
 from lbm.macroscopic import *
 from lbm.forcing import *
 from boundary.flow import no_slip_walls
-from boundary.scalar_halfway import *
+from boundary.scalar import *
 def run(
     Ra=1e5,
     nx=101,
     ny=101,
     max_steps=50000,
     tolerance=1e-8,
-    visco=0.02,
+    visco=0.02, # Assumptions, Source: Book
+    rho0=6.0    # Assumptions, Source: Book
 ):
     # Parameters
     Pr = 0.71
@@ -24,15 +25,12 @@ def run(
     delta_T = (T_hot - T_cold)
     cs = np.sqrt(D2Q9.cs2)
     
-    # Assumptions, Source: Book
-    rho0 = 6.0
-    
     # Ra = g beta dT L^3 / (visco alpha)
     # Pr = visco / alpha
     alpha = (visco / Pr)
     g_beta = (Ra * visco**2) / (Pr * delta_T * nx**3)
     
-    # incompressibility check
+    # incompressibility check, based on book example
     vel_propertion = np.sqrt(g_beta * delta_T * nx)
     if vel_propertion > 0.15:
         print(f"sqrt(g.beta.dT.Nx) is {vel_propertion}, which is not acceptable for an incompressible flow")
@@ -74,7 +72,7 @@ def run(
         # Macroscopic velocity
         rho, u = flow_macroscopic(f, D2Q9, force)
         # Guo forcing term
-        source = guo_source(force, u, tau_f, D2Q9)
+        source = source(force, u, tau_f, D2Q9)
         # Collision
         f_post = collide_flow(f, rho, u, tau_f, D2Q9, source)
         # Streaming
@@ -106,7 +104,7 @@ def run(
         residual_T = np.max(np.abs(T - T_old))
         residual_u = np.max(np.abs(u - u_old))
         residual = max(residual_T, residual_u)
-        if step % 1000 == 0:
+        if step % 500 == 0:
             speed = np.sqrt(u[0]**2 + u[1]**2)
             print(
                 f"step = {step:7d}   "
