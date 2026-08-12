@@ -1,71 +1,51 @@
 import numpy as np
 from lbm.lattice.d2q9 import D2Q9
 from lbm.lattice.d2q5 import D2Q5
-from lbm.equilibrium import (
-    flow_equilibrium,
-    scalar_equilibrium
-)
-from lbm.collision import (
-    collide_flow,
-    collide_scalar
-)
+from lbm.equilibrium import *
+from lbm.collision import *
 from lbm.streaming import stream
-from lbm.macroscopic import (
-    flow_macroscopic,
-    scalar_macroscopic
-)
-from lbm.forcing import (
-    buoyancy_force,
-    guo_source
-)
+from lbm.macroscopic import *
+from lbm.forcing import *
 from boundary.flow import no_slip_walls
-from boundary.scalar_halfway import (
-    dirichlet_left,
-    dirichlet_right,
-    adiabatic_bottom,
-    adiabatic_top
-)
+from boundary.scalar_halfway import *
 def run(
-    Ra=1e3,
+    Ra=1e5,
     nx=101,
     ny=101,
-    max_steps=6000,
-    tolerance=1e-8
+    max_steps=50000,
+    tolerance=1e-8,
+    visco=0.02,
 ):
-    # ---------------------------------
-    # Physical / dimensionless values
-    # ---------------------------------
+    # Parameters
     Pr = 0.71
     T_hot = 1.0
     T_cold = 0.0
     T_ref = (T_hot + T_cold) / 2.0
     delta_T = (T_hot - T_cold)
-    rho0 = 1.0
-    # ---------------------------------
-    # Lattice parameters
-    # ---------------------------------
-    # With halfway walls, nx fluid nodes
-    # represent a cavity width of nx
-    # lattice spacings.
-    L = float(nx)
-    Ma = 0.1
     cs = np.sqrt(D2Q9.cs2)
-    U_char = (Ma * cs)
-    # From:
-    #
-    # Ra = g beta dT L^3 / (nu alpha)
-    # Pr = nu / alpha
-    nu = (U_char * L * np.sqrt(Pr / Ra))
-    alpha = (nu / Pr)
-    tau_f = (0.5 + nu / D2Q9.cs2)
+    
+    # Assumptions, Source: Book
+    rho0 = 6.0
+    
+    # Ra = g beta dT L^3 / (visco alpha)
+    # Pr = visco / alpha
+    alpha = (visco / Pr)
+    g_beta = (Ra * visco**2) / (Pr * delta_T * nx**3)
+    
+    # incompressibility check
+    vel_propertion = np.sqrt(g_beta * delta_T * nx)
+    if vel_propertion > 0.15:
+        print(f"sqrt(g.beta.dT.Nx) is {vel_propertion}, which is not acceptable for an incompressible flow")
+        return
+    
+    tau_f = (0.5 + visco / D2Q9.cs2)
     tau_T = (0.5 + alpha / D2Q5.cs2)
-    g_beta = (U_char**2 / (L * delta_T))
 
     print()
     print("-----------------------------")
     print(f"Ra      = {Ra:.3e}")
     print(f"Pr      = {Pr}")
-    print(f"nu      = {nu:.6e}")
+    print(f"visco   = {visco:.6e}")
     print(f"alpha   = {alpha:.6e}")
     print(f"tau_f   = {tau_f:.6f}")
     print(f"tau_T   = {tau_T:.6f}")
@@ -73,33 +53,20 @@ def run(
     print("-----------------------------")
     print()
     
-    # ---------------------------------
-    # Initial flow
-    # ---------------------------------
+    # Initial flow and temprature
     rho = np.full((ny, nx), rho0)
     u = np.zeros((2, ny, nx))
     f = flow_equilibrium(rho, u, D2Q9)
-    # ---------------------------------
-    # Initial temperature
-    #
-    # Linear from hot left wall
-    # to cold right wall.
-    # ---------------------------------
     x = (np.arange(nx) + 0.5) / nx
     T = (T_hot + (T_cold - T_hot) * x)
     T = np.tile(T, (ny, 1))
     g = scalar_equilibrium(T, u, D2Q5)
 
-    # ---------------------------------
     # Main loop
-    # ---------------------------------
-
     for step in range(max_steps):
         T_old = T.copy()
         u_old = u.copy()
-        # =================================
         # FLOW
-        # =================================
         # Density before force calculation
         rho = np.sum(f, axis=0)
         # Boussinesq force
@@ -114,9 +81,8 @@ def run(
         f = stream(f_post, D2Q9)
         # No-slip walls
         f = no_slip_walls(f, f_post, D2Q9)
-        # =================================
+        
         # TEMPERATURE
-        # =================================
         # Collision
         g_post = collide_scalar(g, T, tau_T, D2Q5, u)
         # Streaming
@@ -129,17 +95,14 @@ def run(
         g = adiabatic_bottom(g, g_post, T, D2Q5)
         # Adiabatic top
         g = adiabatic_top(g, g_post, T, D2Q5)
-        # New temperature
+        
+        # New Macroscopic variables
         T = scalar_macroscopic(g)
-        # =================================
-        # Updated velocity for convergence
-        # =================================
         rho = np.sum(f, axis=0)
         force = buoyancy_force(rho, T, g_beta, T_ref)
         rho, u = flow_macroscopic(f, D2Q9, force)
-        # =================================
-        # Convergence
-        # =================================
+        
+        # Check Convergence
         residual_T = np.max(np.abs(T - T_old))
         residual_u = np.max(np.abs(u - u_old))
         residual = max(residual_T, residual_u)
@@ -152,10 +115,7 @@ def run(
             )
         if residual < tolerance:
             print()
-            print(
-                f"Converged after "
-                f"{step} steps"
-            )
+            print(f"Converged after {step} steps")
             break
     return {
         "Ra": Ra,
@@ -167,15 +127,15 @@ def run(
         "g": g,
         "tau_f": tau_f,
         "tau_T": tau_T,
-        "nu": nu,
+        "nu": visco,
         "alpha": alpha,
         "residual": residual,
         "steps": step
     }
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    result = run(
-        Ra=1e3
-    )
+#     result = run(
+#         Ra=1e3
+#     )

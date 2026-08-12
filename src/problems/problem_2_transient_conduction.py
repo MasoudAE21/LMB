@@ -11,7 +11,7 @@ from boundary.scalar_halfway import (
 )
 
 
-def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
+def run(thermal_diffusivity=0.5, nx=101, max_steps=20000, tol=1e-6):
     # Problem parameters
     L = 1.0
     T_left = 1.0
@@ -25,6 +25,7 @@ def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
     # Initial condition
     T = np.zeros(nx)
     g = scalar_equilibrium(T, None, lattice)
+    
     # Live convergence plot
     plt.ion()
     fig, ax = plt.subplots()
@@ -34,6 +35,7 @@ def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
     ax.set_title("Convergence")
     steps_history = []
     residual_history = []
+    
     # Time loop
     for step in range(max_steps):
         T_old = scalar_macroscopic(g)
@@ -61,13 +63,10 @@ def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
             print(f"Converged after {step} steps")
             break
     plt.ioff()
-    # ---------------------------------
+   
+    # Final temperature plot 
     # Analytical steady solution
-    # ---------------------------------
     T_exact = (T_left + (T_right - T_left) * x / L)
-    # ---------------------------------
-    # Final temperature plot
-    # ---------------------------------
     plt.figure()
     plt.plot(x, T_exact, label="Analytical")
     plt.plot(x, T, "o", markersize=3, label="LBM")
@@ -78,5 +77,5 @@ def run(thermal_diffusivity=1e-6, nx=101, max_steps=1e4, tol=1e-5):
     plt.show()
 
 
-if __name__ == "__main__":
-    run()
+# if __name__ == "__main__":
+#     run()

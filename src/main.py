@@ -43,19 +43,20 @@
 
 # print("Simulation finished.")
 
-# from problems.problem_2_transient_conduction import run
-
-
-# run()
-
-from problems.problem_1_natural_convection import run
+from problems.problem_2_transient_conduction import run as problem_2
+from problems.problem_1_natural_convection import run as problem_1
 from utils.plotting import plot_results
 
-result = run(
-    Ra=1e3,
-    nx=101,
-    ny=101,
-    max_steps=3000
-)
+# problem_2(thermal_diffusivity=1.0)
+result = problem_1(Ra=1e7 ,visco=0.2, nx=550, ny=550, max_steps=150000)
+if result is not None:
+    plot_results(result)
 
-plot_results(result)
+# result = problem_1(
+#     Ra=1e3,
+#     nx=101,
+#     ny=101,
+#     max_steps=3000
+# )
+
+# plot_results(result)
