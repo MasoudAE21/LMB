@@ -28,10 +28,10 @@ def run(
     # Ra = g beta dT L^3 / (visco alpha)
     # Pr = visco / alpha
     alpha = (visco / Pr)
-    g_beta = (Ra * visco**2) / (Pr * delta_T * nx**3)
+    g_beta = (Ra * visco**2) / (Pr * delta_T * ny**3)
     
     # incompressibility check, based on book example
-    vel_propertion = np.sqrt(g_beta * delta_T * nx)
+    vel_propertion = np.sqrt(g_beta * delta_T * ny)
     if vel_propertion > 0.15:
         print(f"sqrt(g.beta.dT.Nx) is {vel_propertion}, which is not acceptable for an incompressible flow")
         return

@@ -4,7 +4,7 @@ from utils.plotting import plot_results
 
 case_1 = True
 if case_1:
-    result = problem_1(Ra=1e7, nx=600, ny=100, max_steps=150000, tolerance=1e-6)
+    result = problem_1(Ra=1e7, nx=100, ny=600, max_steps=150000, tolerance=2e-5)
     if result is not None:
         plot_results(result)
 else:
